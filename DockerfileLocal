@@ -1,0 +1,50 @@
+ARG NODE_VERSION=24.16.0
+
+FROM node:${NODE_VERSION:-24}-alpine AS builder
+
+RUN apk update && apk upgrade
+
+#Temporary fix for undici
+RUN cd /usr/local/lib/node_modules/npm/node_modules/node-gyp \
+ && npm install undici@6.27.0 --no-save --package-lock=false --ignore-scripts
+RUN rm -rf /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules/serialize-javascript \
+ && rm -rf /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules/mocha \
+ && rm -rf /usr/local/lib/node_modules/npm/node_modules/node-gyp/node_modules/undici
+
+ENV WORKDIR="lavajet-backend"
+
+COPY ./src/ /$WORKDIR/src/
+COPY ./tests/ /$WORKDIR/tests/
+COPY ./workdocs /$WORKDIR/workdocs
+COPY ./*.json /$WORKDIR/
+COPY ./.npmrc /$WORKDIR/
+COPY ./package.json /$WORKDIR/
+COPY ./package-lock.json /$WORKDIR/
+
+WORKDIR /$WORKDIR
+
+RUN --mount=type=secret,id=TOKEN NPM_TOKEN=$(cat /run/secrets/TOKEN) npm ci
+
+LABEL name="Pharmaledger's Lavajet Backend base image (local)" description="Local dev base image"
+
+
+FROM builder AS builder-pla-local
+
+RUN mv /${WORKDIR}/src/app.module.ts /${WORKDIR}/src/app-ew.module.ts
+RUN mv /${WORKDIR}/src/app-pla.module.ts /${WORKDIR}/src/app.module.ts
+
+LABEL name="Lavajet Admin Lavajet Backend base image (local)" description="Local dev base image, devDependencies kept"
+
+
+FROM builder-pla-local AS dev-pla-watch
+
+ENV WORKDIR="lavajet-backend"
+
+WORKDIR /$WORKDIR
+
+EXPOSE 3000/tcp
+EXPOSE 9229/tcp
+
+ENTRYPOINT ["npx", "nest", "start", "--watch", "--debug", "0.0.0.0:9229"]
+
+LABEL name="Lavajet Admin Lavajet Backend (dev watch, local only)" description="Local dev image with bind-mounted source and nest watch hot-reload, no rebuild needed on change. Not for team use."

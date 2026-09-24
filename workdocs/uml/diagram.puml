@@ -1,0 +1,110 @@
+@startuml EW Backend — Component View
+
+title EW Backend — Component View
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor "EW Frontend" as EWF
+actor "PLA Admin / Lavajet Frontend" as PLAF
+actor "Integration Consumer" as INT
+
+rectangle "ew-backend (NestJS)" as BACK {
+
+  package "Entry" {
+    component "main.ts\nbootstrap + versioning\n+ Swagger + CORS" as MAIN
+    component "bin/cli.ts\nnest boot / migrate / export-api" as CLI
+  }
+
+  package "Application modules" {
+    component "AppModule (EW/MAH)\nsrc/app.module.ts" as APP_EW
+    component "AppModule (PLA)\nsrc/app-pla.module.ts" as APP_PLA
+  }
+
+  package "Request pipeline" {
+    component "ThrottlerGuard" as THROTTLE
+    component "AuthInterceptor" as AUTHINT
+    component "ArrayNoContentInterceptor" as NOCONTENT
+    component "KibanaSessionGuard" as KBSESS
+  }
+
+  package "Auth (@Global)" {
+    component "AuthModule\nJwtService + FabricKeycloakAuthHandler\n+ FabricIdentityService" as AUTH
+  }
+
+  package "API" {
+    component "ApiModule\nauth / account / infrastructure\nleaflet-resolver" as APIM
+    component "PublicModule\nowner / metadata / leaflet\nleaflet-resolver" as PUB
+    component "IntegrationModule\nlegacy /integration" as INTS
+    component "KibanaModule\n/kibana proxy" as KIB
+  }
+
+  package "DecafModule (auto-controllers)" {
+    component "FabricClientAdapter\nFabricFlavour" as FAB
+    component "NanoAdapter\ncredentials + tasks" as NANO
+    component "TypeORMAdapter\nPostgreSQL (PLA)" as PG
+    component "Observer SSE\n/events" as SSE
+  }
+
+  package "Toolkit @bagacito/lavajet-toolkit" {
+    component "Models / Services / Repositories" as TK
+  }
+}
+
+database "Hyperledger Fabric" as LEDGER
+database "CouchDB" as COUCH
+database "PostgreSQL" as POSTGRES
+cloud "Keycloak" as KC
+cloud "Kibana" as KB
+cloud "S3 / Blob store" as S3
+
+EWF --> MAIN
+PLAF --> MAIN
+INT --> INTS
+
+MAIN --> APP_EW
+MAIN --> APP_PLA
+CLI --> APP_EW
+CLI --> APP_PLA
+
+APP_EW --> APIM
+APP_EW --> PUB
+APP_EW --> KIB
+APP_PLA --> APIM
+APP_PLA --> PUB
+APP_PLA --> KIB
+
+APIM --> AUTH
+PUB --> AUTH
+INTS --> AUTH
+KIB --> KBSESS
+KBSESS --> AUTH
+
+THROTTLE --> AUTHINT
+AUTHINT --> APIM
+AUTHINT --> PUB
+AUTHINT --> INTS
+AUTHINT --> AUTH
+NOCONTENT --> APIM
+NOCONTENT --> PUB
+
+AUTH --> KC
+AUTH --> FAB
+
+APIM --> TK
+PUB --> TK
+INTS --> TK
+KIB --> KB
+
+TK --> FAB
+TK --> NANO
+TK --> PG
+TK --> SSE
+TK --> S3
+
+FAB --> LEDGER
+NANO --> COUCH
+PG --> POSTGRES
+SSE --> FAB
+
+@enduml

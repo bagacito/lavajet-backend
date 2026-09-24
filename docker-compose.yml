@@ -1,0 +1,115 @@
+# Local hot-reload variant of pdm-backend.
+# Preconditions:
+#   1. Toolkit e2e tests already ran (setup.test.ts + setup-org.test.ts)
+#      so all pdm-* infra containers (peer, ca, dragonfly, oauth2proxy-pdm,
+#      keycloak realm=pdm, pdm-backend...) are up.
+#   2. Run bin/dump-pdm-env.sh once to snapshot the runtime env of the
+#      test-bootstrapped pdm-backend into .env.pdm.runtime.
+#   3. docker stop pdm-backend && docker rm pdm-backend  (container_name
+#      below re-uses the same name so traefik routing keeps working).
+# Then: docker compose up -d --build
+
+networks:
+  auth-network:
+    external: true
+  elk-network:
+    external: true
+  pdm_network:
+    external: true
+  ew-pdm:
+    external: true
+  s3-network:
+    name: s3-network
+    external: true
+
+
+secrets:
+  TOKEN:
+    file: .npmtoken
+
+volumes:
+  pdm-ca-client-vol:
+    external: true
+  pdm-contracts-vol:
+    external: true
+  pdm_backend-storage:
+    external: true
+
+services:
+  pdm-backend:
+    user: root
+    build:
+      context: .
+      dockerfile: DockerfileLocal
+      target: dev-pla-watch
+      secrets:
+        - TOKEN
+    image: ghcr.io/bagacito/lavajet-backend-pla-dev:pdm-local
+    container_name: pdm-backend
+    volumes:
+      - pdm-ca-client-vol:/docker/docker-data:ro
+      - pdm-contracts-vol:/docker/contract:rw
+      - pdm_backend-storage:/docker/storage:rw
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - ./src:/lavajet-backend/src
+      - ./tests:/lavajet-backend/tests
+      - ./workdocs:/lavajet-backend/workdocs
+    ports:
+      - "9230:9229"
+    env_file:
+      - .env.pdm
+    extra_hosts:
+      - "ew-backend-mah2.lavajet.internal:host-gateway"
+    labels:
+      - "pla_mah_index_name=pdm"
+      - "traefik.enable=true"
+      - "traefik.docker.network=auth-network"
+      - "traefik.http.services.ew-pdm-backend.loadbalancer.server.port=3000"
+
+      - "traefik.http.middlewares.ew-pdm-cors.headers.accesscontrolalloworiginlist=https://ew-frontend-pdm.lavajet.internal"
+      - "traefik.http.middlewares.ew-pdm-cors.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      - "traefik.http.middlewares.ew-pdm-cors.headers.accesscontrolallowheaders=Authorization,Content-Type,Cache-Control,Pragma,x-correlation-id,x-pending-task,Last-Event-Id"
+      - "traefik.http.middlewares.ew-pdm-cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.ew-pdm-cors.headers.accesscontrolmaxage=86400"
+      - "traefik.http.middlewares.ew-pdm-cors.headers.addvaryheader=true"
+
+      - "traefik.http.routers.ew-pdm-backend.rule=Host(`ew-backend-pdm.lavajet.internal`)"
+      - "traefik.http.routers.ew-pdm-backend.entrypoints=websecure"
+      - "traefik.http.routers.ew-pdm-backend.tls=true"
+      - "traefik.http.routers.ew-pdm-backend.middlewares=ew-pdm-cors@docker,oauth-pdm@docker"
+      - "traefik.http.routers.ew-pdm-backend.service=ew-pdm-backend"
+
+      - "traefik.http.routers.ew-backend-kibana-pdm.rule=Host(`ew-backend-pdm.lavajet.internal`) && PathPrefix(`/kibana`)"
+      - "traefik.http.routers.ew-backend-kibana-pdm.entrypoints=websecure"
+      - "traefik.http.routers.ew-backend-kibana-pdm.tls=true"
+      - "traefik.http.routers.ew-backend-kibana-pdm.middlewares=ew-pdm-cors@docker"
+      - "traefik.http.routers.ew-backend-kibana-pdm.priority=2001"
+      - "traefik.http.routers.ew-backend-kibana-pdm.service=ew-pdm-backend"
+
+      - "traefik.http.routers.ew-backend-account-pdm.rule=Host(`ew-backend-pdm.lavajet.internal`) && Path(`/account`) && Method(`POST`)"
+      - "traefik.http.routers.ew-backend-account-pdm.entrypoints=websecure"
+      - "traefik.http.routers.ew-backend-account-pdm.tls=true"
+      - "traefik.http.routers.ew-backend-account-pdm.middlewares=ew-pdm-cors@docker"
+      - "traefik.http.routers.ew-backend-account-pdm.priority=2002"
+      - "traefik.http.routers.ew-backend-account-pdm.service=ew-pdm-backend"
+
+      - "traefik.http.routers.ew-backend-public-pdm.rule=Host(`ew-backend-pdm.lavajet.internal`) && (PathPrefix(`/public`) || PathPrefix(`/v1/public`))"
+      - "traefik.http.routers.ew-backend-public-pdm.entrypoints=websecure"
+      - "traefik.http.routers.ew-backend-public-pdm.tls=true"
+      - "traefik.http.routers.ew-backend-public-pdm.middlewares=ew-pdm-cors@docker"
+      - "traefik.http.routers.ew-backend-public-pdm.priority=2003"
+      - "traefik.http.routers.ew-backend-public-pdm.service=ew-pdm-backend"
+
+      - "traefik.http.routers.ew-backend-infra-pdm.rule=Host(`ew-backend-pdm.lavajet.internal`) && ((Path(`/infrastructure/onboard-on-prem`) && Method(`POST`)) || (Path(`/infrastructure/claim-on-prem`) && Method(`POST`)) || (PathPrefix(`/infrastructure/download`) && Method(`GET`)) || (Path(`/infrastructure/deploy-on-prem-contracts`) && Method(`POST`)))"
+      - "traefik.http.routers.ew-backend-infra-pdm.entrypoints=websecure"
+      - "traefik.http.routers.ew-backend-infra-pdm.tls=true"
+      - "traefik.http.routers.ew-backend-infra-pdm.middlewares=ew-pdm-cors@docker"
+      - "traefik.http.routers.ew-backend-infra-pdm.priority=2004"
+      - "traefik.http.routers.ew-backend-infra-pdm.service=ew-pdm-backend"
+    networks:
+      - auth-network
+      - pdm_network
+      - elk-network
+      - ew-pdm
+      - s3-network
+    restart: unless-stopped
