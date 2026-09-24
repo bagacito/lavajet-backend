@@ -86,7 +86,6 @@ log.debug(`environment: ${JSON.stringify(serializedEnv, null, 2)}`);
         }
       },
     }),
-    KibanaModule,
     ThrottlerModule.forRoot([
       {
         name: "default",

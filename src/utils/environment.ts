@@ -50,10 +50,7 @@ export type NestConfig = LavajetConfig &
     scans: {
       allowMissingBatch: boolean;
     };
-    token: string;
     mode: string;
-    onPremContractPort: string;
-    epiContractPort: string;
     automaticContractUpdate: boolean;
     versionWhiteList: string;
     versionWhiteListSeperator: string;
@@ -114,10 +111,7 @@ export const DefaultNestConfig: NestConfig = Object.assign(
     scans: {
       allowMissingBatch: false,
     },
-    token: "",
     mode: "",
-    onPremContractPort: "8480",
-    epiContractPort: "8470",
     automaticContractUpdate: false,
     versionWhiteList: "api|api-json",
     versionWhiteListSeperator: "|",

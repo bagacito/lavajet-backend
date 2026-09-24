@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { lavajetCommand } from "@bagacito/lavajet-toolkit/cli";
 import migrateCommand from "@decaf-ts/for-nest/cli";
 import { bootCommand } from "../cli-module";
 
@@ -16,6 +15,3 @@ for (const cmd of nestCli.commands) {
 
 nestCmd.addCommand(bootCommand);
 
-lavajetCommand.addCommand(nestCmd);
-
-lavajetCommand.parseAsync(process.argv);

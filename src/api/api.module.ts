@@ -8,22 +8,17 @@
 import { DecafModule } from "@decaf-ts/for-nest";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth";
-import { AccountPlaController } from "./account/account-pla.controller";
 import { AuthController } from "./auth/auth.controller";
-import { InfrastructurePLAController } from "./infrastructure/infrastructure-pla.controller";
-import { PublicPlaModule } from "./public/public-pla.module";
 
 // const controllers: Type<any>[] = [
 //   AccountController,
 //   ...(Environment.environment === "local" ? [AuthController] : []),
 // ];
 @Module({
-  imports: [AuthModule, DecafModule, PublicPlaModule],
+  imports: [AuthModule, DecafModule],
   providers: [],
   controllers: [
     AuthController,
-    AccountPlaController,
-    InfrastructurePLAController,
   ],
 })
 export class ApiModule {}
