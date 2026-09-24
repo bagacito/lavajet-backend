@@ -206,6 +206,6 @@ the operation blocks declared in the application modules.
 ## Configuration
 
 Every runtime value is read through the accumulated decaf `Environment` object
-(`src/utils/environment.ts`, `src/utils/pla-environment.ts`). See
+(`src/utils/environment.ts`). See
 [Environment](LAVAJET_05_9_Environment.md) for the full inventory of variables
 the backend actually consumes.

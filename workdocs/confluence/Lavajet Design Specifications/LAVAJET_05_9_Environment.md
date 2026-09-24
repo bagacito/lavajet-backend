@@ -20,10 +20,7 @@ UPPER_SNAKE. Examples:
 
 `Environment` is `Env.accumulate(DefaultNestConfig)` where `DefaultNestConfig`
 merges the toolkit `DefaultLavajetConfig` with the backend overrides in
-`src/utils/environment.ts:68`. The PLA build additionally accumulates the toolkit
-`DefaultAdminLavajetConfig`. Note that `src/utils/pla-environment.ts` defines a
-`PlaEnvironment`/`DefaultNestConfig`, but nothing imports it — the PLA build uses
-`Environment`/`AdminEnvironment` directly, so that file is currently dead code.
+`src/utils/environment.ts:68`.
 
 ## HTTP / CORS / limits
 

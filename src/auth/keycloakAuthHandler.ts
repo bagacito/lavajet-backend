@@ -21,11 +21,6 @@ import {
   type KeycloakAccessTokenPayload,
 } from "@decaf-ts/integrations/nest";
 import { Injectable, SetMetadata } from "@nestjs/common";
-import {
-  FabricIdentity,
-  FabricIdentityService,
-  IsReaderAllowedKey,
-} from "@bagacito/lavajet-toolkit";
 import crypto from "crypto";
 import {
   getFabricAttributesFromCert,
@@ -43,14 +38,14 @@ type FabricAuthRequestLike = AuthRequestLike & {
   [SKIP_FABRIC_IDENTITY_KEY]?: boolean;
 };
 
-type FabricContextBindings = {
-  keyCertOrDirectoryPath?: Buffer;
-  certCertOrDirectoryPath?: Buffer;
-  roles?: string[];
-  user?: string;
-  msp?: string;
-  ip?: string;
-};
+// type FabricContextBindings = {
+//   keyCertOrDirectoryPath?: Buffer;
+//   certCertOrDirectoryPath?: Buffer;
+//   roles?: string[];
+//   user?: string;
+//   msp?: string;
+//   ip?: string;
+// };
 
 /**
  * Metadata key for the `@SkipFabricIdentity()` decorator.
@@ -113,15 +108,18 @@ export const SkipFabricIdentity = () =>
  */
 @Injectable()
 export class FabricKeycloakAuthHandler extends KeycloakAuthHandler {
-  private readonly identityService: FabricIdentityService;
+  // private readonly identityService: FabricIdentityService;
 
-  constructor(identityService?: FabricIdentityService) {
-    super();
-    this.identityService =
-      identityService ??
-      (DecafService.get(FabricIdentity as any) as FabricIdentityService);
+  // constructor(identityService?: FabricIdentityService) {
+  //   super();
+  //   this.identityService =
+  //     identityService ??
+  //     (DecafService.get(FabricIdentity as any) as FabricIdentityService);
+  // }
+
+  constructor(){
+    super()
   }
-
   /**
    * Public leaflet `external` routes serve public reads only. The write methods
    * (POST/PUT/PATCH/DELETE) still submit a Fabric transaction that needs the
@@ -166,39 +164,39 @@ export class FabricKeycloakAuthHandler extends KeycloakAuthHandler {
     return super.parseFromRequest(request);
   }
 
-  public override async prime(
-    request: AuthRequestLike,
-    ctx: DecafRequestContext
-  ): Promise<KeycloakAuthData> {
-    const fabricRequest = request as FabricAuthRequestLike;
-    const data = await super.prime(request, ctx);
-    if (data.isPublic) return data;
+  // public override async prime(
+  //   request: AuthRequestLike,
+  //   ctx: DecafRequestContext
+  // ): Promise<KeycloakAuthData> {
+  //   const fabricRequest = request as FabricAuthRequestLike;
+  //   const data = await super.prime(request, ctx);
+  //   if (data.isPublic) return data;
 
-    const jwtPayload =
-      this.jwtService!.getTokenPayload<KeycloakAccessTokenPayload>(
-        data.token
-      ) ?? null;
-    if (jwtPayload) {
-      ctx.accumulate({
-        jwtPayload: {
-          ...jwtPayload,
-          realm: data.organization,
-        },
-      } as any);
-    }
+  //   const jwtPayload =
+  //     this.jwtService!.getTokenPayload<KeycloakAccessTokenPayload>(
+  //       data.token
+  //     ) ?? null;
+  //   if (jwtPayload) {
+  //     ctx.accumulate({
+  //       jwtPayload: {
+  //         ...jwtPayload,
+  //         realm: data.organization,
+  //       },
+  //     } as any);
+  //   }
 
-    const handlerName = this.resolveHandlerName(fabricRequest);
-    const skipFabric =
-      fabricRequest[SKIP_FABRIC_IDENTITY_KEY] === true ||
-      this.isEventsApiRequest(fabricRequest);
-    const fabricBindings =
-      handlerName === "proxy" || skipFabric
-        ? { roles: data.roles }
-        : await this.buildFabricBindings(data, fabricRequest);
+  //   const handlerName = this.resolveHandlerName(fabricRequest);
+  //   const skipFabric =
+  //     fabricRequest[SKIP_FABRIC_IDENTITY_KEY] === true ||
+  //     this.isEventsApiRequest(fabricRequest);
+  //   const fabricBindings =
+  //     handlerName === "proxy" || skipFabric
+  //       ? { roles: data.roles }
+  //       : await this.buildFabricBindings(data, fabricRequest);
 
-    ctx.accumulate(fabricBindings);
-    return data;
-  }
+  //   ctx.accumulate(fabricBindings);
+  //   return data;
+  // }
 
   protected override async validate(
     data: KeycloakAuthData,
@@ -210,54 +208,54 @@ export class FabricKeycloakAuthHandler extends KeycloakAuthHandler {
   ): Promise<void> {
     if (data.isPublic) return;
 
-    const requestContext = args[args.length - 1] as DecafRequestContext;
-    const request = requestContext.request as unknown as AuthRequestLike;
+    // const requestContext = args[args.length - 1] as DecafRequestContext;
+    // const request = requestContext.request as unknown as AuthRequestLike;
 
-    const tokenPayload =
-      this.jwtService!.getTokenPayload<KeycloakAccessTokenPayload>(
-        data.token
-      ) ?? null;
-    const roles = getClientRoles(tokenPayload);
-    const log = requestContext.logger
-      .for(this.validate)
-      .for({
-        organization: data.organization,
-        sessionId: (tokenPayload as (KeycloakAccessTokenPayload & { sid?: string }) | null)
-          ?.sid,
-      });
-    log.debug(`Validating token for ${request.method} ${request.url}`);
-    log.debug(
-      `Token accepted for user ${data.user ?? "unknown"} with roles ${roles.join(", ") || "none"}`
-    );
+    // const tokenPayload =
+    //   this.jwtService!.getTokenPayload<KeycloakAccessTokenPayload>(
+    //     data.token
+    //   ) ?? null;
+    // const roles = getClientRoles(tokenPayload);
+    // const log = requestContext.logger
+    //   .for(this.validate)
+    //   .for({
+    //     organization: data.organization,
+    //     sessionId: (tokenPayload as (KeycloakAccessTokenPayload & { sid?: string }) | null)
+    //       ?.sid,
+    //   });
+    // log.debug(`Validating token for ${request.method} ${request.url}`);
+    // log.debug(
+    //   `Token accepted for user ${data.user ?? "unknown"} with roles ${roles.join(", ") || "none"}`
+    // );
 
-    // PLA-specific role enforcement
-    const modelCtor = typeof model === "string" ? Model.get(model) : model;
-    const allowedRoles = modelCtor
-      ? (Metadata.get(modelCtor, PersistenceKeys.AUTH_ROLE) as string[])
-      : [];
-    if (allowedRoles && allowedRoles.length > 0) {
-      if (!allowedRoles.some((r: string) => roles.includes(r))) {
-        if (request && request.method !== "GET" && isPla(roles)) {
-          throw new AuthorizationError("Insufficient roles");
-        }
-      }
-      if (!hasAnyAllowedLevel(roles)) {
-        throw new AuthorizationError("No allowed level access role");
-      }
-      if (!isWriter(roles) && isPlaReader(roles)) {
-        const allowedReaderOps = modelCtor
-          ? Metadata.get(modelCtor, IsReaderAllowedKey)
-          : undefined;
-        const handlerName = this.resolveHandlerName(request);
-        if (
-          allowedReaderOps &&
-          handlerName &&
-          !allowedReaderOps.includes(handlerName)
-        ) {
-          throw new AuthorizationError("Insufficient permissions");
-        }
-      }
-    }
+    // // PLA-specific role enforcement
+    // const modelCtor = typeof model === "string" ? Model.get(model) : model;
+    // const allowedRoles = modelCtor
+    //   ? (Metadata.get(modelCtor, PersistenceKeys.AUTH_ROLE) as string[])
+    //   : [];
+    // if (allowedRoles && allowedRoles.length > 0) {
+    //   if (!allowedRoles.some((r: string) => roles.includes(r))) {
+    //     if (request && request.method !== "GET" && isPla(roles)) {
+    //       throw new AuthorizationError("Insufficient roles");
+    //     }
+    //   }
+    //   if (!hasAnyAllowedLevel(roles)) {
+    //     throw new AuthorizationError("No allowed level access role");
+    //   }
+    //   if (!isWriter(roles) && isPlaReader(roles)) {
+    //     const allowedReaderOps = modelCtor
+    //       ? Metadata.get(modelCtor, IsReaderAllowedKey)
+    //       : undefined;
+    //     const handlerName = this.resolveHandlerName(request);
+    //     if (
+    //       allowedReaderOps &&
+    //       handlerName &&
+    //       !allowedReaderOps.includes(handlerName)
+    //     ) {
+    //       throw new AuthorizationError("Insufficient permissions");
+    //     }
+    //   }
+    // }
 
     await super.validate(
       data,
@@ -331,99 +329,99 @@ export class FabricKeycloakAuthHandler extends KeycloakAuthHandler {
    * identity service (credential lookup or re-enrollment), and any enrollment
    * failure during `registerAndEnroll`.
    */
-  private async buildFabricBindings(
-    data: KeycloakAuthData,
-    request: AuthRequestLike
-  ): Promise<FabricContextBindings> {
-    const enrollment = await this.verifyAndExtractEnrollmentPayload(data);
+  // private async buildFabricBindings(
+  //   data: KeycloakAuthData,
+  //   request: AuthRequestLike
+  // ): Promise<FabricContextBindings> {
+  //   const enrollment = await this.verifyAndExtractEnrollmentPayload(data);
 
-    this.refuseEnrollmentInDecodeOnlyMode(request);
+  //   this.refuseEnrollmentInDecodeOnlyMode(request);
 
-    const email = enrollment.user;
-    if (!email) {
-      return { roles: enrollment.roles };
-    }
+  //   const email = enrollment.user;
+  //   if (!email) {
+  //     return { roles: enrollment.roles };
+  //   }
 
-    const ip = this.requestIpOf(request);
-    const organization = enrollment.organization ?? "";
+  //   const ip = this.requestIpOf(request);
+  //   const organization = enrollment.organization ?? "";
 
-    let creds: FabricIdentity;
-    try {
-      creds = await this.identityService.getUserCredentials(email, request);
-      const attr = getFabricAttributesFromCert(creds.certificate);
-      if (haveDifferentContent(enrollment.roles || [], attr.roles || [])) {
-        const rolesAttr: IKeyValueAttribute[] = [
-          {
-            name: "roles",
-            value: JSON.stringify(enrollment.roles || []),
-            ecert: true,
-          },
-        ];
-        await this.identityService.reenroll(email, rolesAttr, request);
-        creds = await this.identityService.getUserCredentials(email, request);
-      }
-    } catch (e: unknown) {
-      const logError = (message: string, error: unknown) => {
-        const logger = (
-          this.identityService as unknown as {
-            log?: {
-              for?: (meta: Record<string, unknown>) =>
-                | { error?: (message: string, error?: Error) => void }
-                | undefined;
-              error?: (message: string, error?: Error) => void;
-            };
-          }
-        ).log;
-        (ip ? logger?.for?.({ ip }) : logger)?.error?.(
-          message,
-          error as Error
-        );
-      };
+    // let creds: FabricIdentity;
+    // try {
+    //   creds = await this.identityService.getUserCredentials(email, request);
+    //   const attr = getFabricAttributesFromCert(creds.certificate);
+    //   if (haveDifferentContent(enrollment.roles || [], attr.roles || [])) {
+    //     const rolesAttr: IKeyValueAttribute[] = [
+    //       {
+    //         name: "roles",
+    //         value: JSON.stringify(enrollment.roles || []),
+    //         ecert: true,
+    //       },
+    //     ];
+    //     await this.identityService.reenroll(email, rolesAttr, request);
+    //     creds = await this.identityService.getUserCredentials(email, request);
+    //   }
+    // } catch (e: unknown) {
+    //   const logError = (message: string, error: unknown) => {
+    //     const logger = (
+    //       this.identityService as unknown as {
+    //         log?: {
+    //           for?: (meta: Record<string, unknown>) =>
+    //             | { error?: (message: string, error?: Error) => void }
+    //             | undefined;
+    //           error?: (message: string, error?: Error) => void;
+    //         };
+    //       }
+    //     ).log;
+    //     (ip ? logger?.for?.({ ip }) : logger)?.error?.(
+    //       message,
+    //       error as Error
+    //     );
+    //   };
 
-      if (!(e instanceof NotFoundError)) {
-        logError(`ACCESS FAIL`, e);
-        throw e;
-      }
+    //   if (!(e instanceof NotFoundError)) {
+    //     logError(`ACCESS FAIL`, e);
+    //     throw e;
+    //   }
 
-      const attrs: IKeyValueAttribute = {
-        name: "roles",
-        value: JSON.stringify(enrollment.roles || []),
-        ecert: true,
-      };
-      const pass = crypto.randomBytes(24).toString("hex");
-      try {
-        (this.identityService as any).log?.info?.(
-          `Creating Fabric identity for ${email} in organization ${organization}`
-        );
-        await this.identityService.registerAndEnroll(
-          { userName: email, password: pass },
-          false,
-          undefined,
-          CA_ROLE.USER,
-          attrs,
-          -1,
-          request
-        );
-      } catch (error: unknown) {
-        logError(`ACCESS FAIL - enrollment failed`, error);
-        throw error;
-      }
-      creds = await this.identityService.getUserCredentials(email, request);
-    }
+    //   const attrs: IKeyValueAttribute = {
+    //     name: "roles",
+    //     value: JSON.stringify(enrollment.roles || []),
+    //     ecert: true,
+    //   };
+    //   const pass = crypto.randomBytes(24).toString("hex");
+    //   try {
+    //     (this.identityService as any).log?.info?.(
+    //       `Creating Fabric identity for ${email} in organization ${organization}`
+    //     );
+    //     await this.identityService.registerAndEnroll(
+    //       { userName: email, password: pass },
+    //       false,
+    //       undefined,
+    //       CA_ROLE.USER,
+    //       attrs,
+    //       -1,
+    //       request
+    //     );
+  //     } catch (error: unknown) {
+  //       logError(`ACCESS FAIL - enrollment failed`, error);
+  //       throw error;
+  //     }
+  //     creds = await this.identityService.getUserCredentials(email, request);
+  //   }
 
-    return {
-      keyCertOrDirectoryPath: Buffer.isBuffer(creds.privateKey)
-        ? creds.privateKey
-        : Buffer.from(creds.privateKey, "utf-8"),
-      certCertOrDirectoryPath: Buffer.isBuffer(creds.certificate)
-        ? creds.certificate
-        : Buffer.from(creds.certificate, "utf-8"),
-      roles: enrollment.roles,
-      user: email,
-      msp: organization,
-      ip,
-    };
-  }
+  //   return {
+  //     keyCertOrDirectoryPath: Buffer.isBuffer(creds.privateKey)
+  //       ? creds.privateKey
+  //       : Buffer.from(creds.privateKey, "utf-8"),
+  //     certCertOrDirectoryPath: Buffer.isBuffer(creds.certificate)
+  //       ? creds.certificate
+  //       : Buffer.from(creds.certificate, "utf-8"),
+  //     roles: enrollment.roles,
+  //     user: email,
+  //     msp: organization,
+  //     ip,
+  //   };
+  // }
 
   /**
    * Refuses any Fabric CA side effect when JWT verification is not configured.
@@ -443,25 +441,25 @@ export class FabricKeycloakAuthHandler extends KeycloakAuthHandler {
    * @throws {AuthorizationError} Always, when `Environment.verifyToken` is
    * falsy ("Token verification is not configured; refusing Fabric enrollment").
    */
-  private refuseEnrollmentInDecodeOnlyMode(request: AuthRequestLike): void {
-    if (Environment.verifyToken) return;
-    const ip = this.requestIpOf(request);
-    const logger = (this.identityService as unknown as {
-      log?: {
-        for?: (meta: Record<string, unknown>) =>
-          | { error?: (message: string, error?: Error) => void }
-          | undefined;
-        error?: (message: string, error?: Error) => void;
-      };
-    }).log;
-    (ip ? logger?.for?.({ ip }) : logger)?.error?.(
-      `DECODE-ONLY REFUSAL: JWT verification not configured (verifyToken falsy); ` +
-        `refusing Fabric enrollment side effects for ${request?.method ?? "?"} ${request?.url ?? request?.path ?? "?"}`
-    );
-    throw new AuthorizationError(
-      "Token verification is not configured; refusing Fabric enrollment"
-    );
-  }
+  // private refuseEnrollmentInDecodeOnlyMode(request: AuthRequestLike): void {
+  //   if (Environment.verifyToken) return;
+  //   const ip = this.requestIpOf(request);
+  //   const logger = (this.identityService as unknown as {
+  //     log?: {
+  //       for?: (meta: Record<string, unknown>) =>
+  //         | { error?: (message: string, error?: Error) => void }
+  //         | undefined;
+  //       error?: (message: string, error?: Error) => void;
+  //     };
+  //   }).log;
+  //   (ip ? logger?.for?.({ ip }) : logger)?.error?.(
+  //     `DECODE-ONLY REFUSAL: JWT verification not configured (verifyToken falsy); ` +
+  //       `refusing Fabric enrollment side effects for ${request?.method ?? "?"} ${request?.url ?? request?.path ?? "?"}`
+  //   );
+  //   throw new AuthorizationError(
+  //     "Token verification is not configured; refusing Fabric enrollment"
+  //   );
+  // }
 
   /**
    * Signature-verifies the request token and extracts the enrollment payload

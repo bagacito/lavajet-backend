@@ -6,7 +6,6 @@ import {
 import type { AccumulatedEnvironment } from "@decaf-ts/logging";
 import { VERSION } from "../version";
 import {
-  CertificateFilter,
   FileContentFilter,
   PasswordFilter,
 } from "./logging";
@@ -68,7 +67,6 @@ export const DefaultNestConfig: NestConfig = Object.assign(
   {
     filters: [
       new PasswordFilter(),
-      new CertificateFilter(),
       new FileContentFilter(),
     ],
   },
@@ -124,5 +122,6 @@ export const DefaultNestConfig: NestConfig = Object.assign(
   }
 );
 
-export const Environment: AccumulatedEnvironment<NestConfig> =
-  Env.accumulate(DefaultNestConfig);
+export const Environment: AccumulatedEnvironment<NestConfig> = Env.accumulate(
+  DefaultNestConfig
+) as unknown as AccumulatedEnvironment<NestConfig>;

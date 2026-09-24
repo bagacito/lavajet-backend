@@ -13,9 +13,6 @@ import {
 } from "@decaf-ts/db-decorators";
 import { TypeORMAdapter } from "@decaf-ts/for-typeorm";
 import { DecafModule } from "@decaf-ts/for-nest";
-import {
-  AdminEnvironment,
-} from "@bagacito/lavajet-toolkit";
 import { Module } from "@nestjs/common";
 import { ConfigService as NestConfigService } from "@nestjs/config";
 import { ApiModule } from "./api/api.module";
@@ -32,13 +29,12 @@ import { EVENTS_API_PATH } from "./utils/constants";
 
 const decafHandlers = [ImpersonateHandler as any];
 const throttling = Environment.orThrow().throttling;
-const adminEnv = AdminEnvironment.orThrow();
 const env = Environment.orThrow();
 
 const log = Logging.get();
 
 const serializedEnv = JSON.parse(
-  JSON.stringify(AdminEnvironment, undefined, 2)
+  JSON.stringify(env, undefined, 2)
 );
 log.debug(`environment: ${JSON.stringify(serializedEnv, null, 2)}`);
 
@@ -52,16 +48,16 @@ log.debug(`environment: ${JSON.stringify(serializedEnv, null, 2)}`);
           TypeORMAdapter as any,
           {
             type: "postgres",
-            host: adminEnv.database.postgres!.host, //TODO - for demo
-            port: adminEnv.database.postgres!.port,
-            database: adminEnv.database.postgres!.database,
-            username: adminEnv.database.postgres!.user,
-            password: adminEnv.database.postgres!.password,
+            host: env.database.postgres!.host, //TODO - for demo
+            port: env.database.postgres!.port,
+            database: env.database.postgres!.database,
+            username: env.database.postgres!.user,
+            password: env.database.postgres!.password,
             // env: DATABASE__POSTGRES__SYNCHRONIZE (toolkit config field);
             // cast keeps this forward-compatible with published toolkit
             // versions that predate the field (falls back to true)
             synchronize:
-              (adminEnv.database.postgres as any)?.synchronize ?? true,
+              (env.database.postgres as any)?.synchronize ?? true,
             logging: true,
           } as any,
           new TypeORMTransformer(),

@@ -35,7 +35,7 @@
 
 6. **Configuration is declared, not hard-coded.** Every environment value is read
    through the accumulated decaf `Environment` object
-   (`src/utils/environment.ts`, `src/utils/pla-environment.ts`). No literal
+   (`src/utils/environment.ts`). No literal
    credentials or endpoints are baked into controllers. The only direct
    `process.env` reads are the indexed Fabric MSP maps and the local/CLI escape
    hatches, which cannot be expressed as a decaf path.
