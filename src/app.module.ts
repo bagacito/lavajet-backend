@@ -1,129 +1,46 @@
 /**
- * @module ew-backend/app
- * @description This is the main application module for the ew-backend.
- * @summary It imports and configures all the necessary modules for the application.
+ * @module backend
+ * @description This is the main application module for the PLA (PharmaLedger Association) specific backend.
+ * @summary It imports and configures all the necessary modules for the PLA application.
  * @category Application
  */
 
 import {
-  PreparedStatementKeys,
   Service,
-  TaskEventModel,
-  TaskModel,
 } from "@decaf-ts/core";
 import {
-  BlockOperations,
   InternalError,
-  OperationKeys,
 } from "@decaf-ts/db-decorators";
-import { uses } from "@decaf-ts/decoration";
+import { TypeORMAdapter } from "@decaf-ts/for-typeorm";
+import { DecafModule } from "@decaf-ts/for-nest";
 import {
-  FabricClientAdapter,
-  FabricFlavour,
-  PeerConfig,
-} from "@decaf-ts/for-fabric";
-import { NanoAdapter, NanoFlavour } from "@decaf-ts/for-nano";
-import { controllerConfig, DecafModule } from "@decaf-ts/for-nest";
-import { Logging } from "@decaf-ts/logging";
+  AdminEnvironment,
+} from "@bagacito/lavajet-toolkit";
 import { Module } from "@nestjs/common";
 import { ConfigService as NestConfigService } from "@nestjs/config";
-import {
-  AccountConfig,
-  Batch,
-  Entity,
-  FabricIdentity,
-  History,
-  LeafletFile,
-  LeafletResolver,
-  Product,
-  ProductImage,
-  ProductMarket,
-  ProductStrength,
-  LavajetModule,
-  LavajetModuleFeature,
-} from "@bagacito/lavajet-toolkit";
 import { ApiModule } from "./api/api.module";
 import { AppController } from "./app.controller";
-import { FabricTransformer } from "./handlers/HLFabricRequestTransformer";
 import { ImpersonateHandler } from "./handlers/ImpersonateHandler";
-import { NanoTransformer } from "./handlers/NanoTransformer";
 import { ConfigService } from "./utils/config";
-import { Environment } from "./utils/environment";
-import { EVENTS_API_PATH } from "./utils/constants";
-
+import { Logging } from "@decaf-ts/logging";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth";
-import { KibanaModule } from "./kibana/kibana.module";
-import { ScheduleModule } from "@nestjs/schedule";
-import { ResolverTasksService } from "./utils/ResolverTaskService";
-
-uses(NanoFlavour)(FabricIdentity);
-
-// order like this on purpose.  first, the all adapters, then models (if any), then all te nest
-BlockOperations([OperationKeys.UPDATE, OperationKeys.CREATE])(TaskModel);
-BlockOperations([
-  OperationKeys.UPDATE,
-  OperationKeys.CREATE,
-  OperationKeys.DELETE,
-])(TaskEventModel);
-BlockOperations([
-  OperationKeys.UPDATE,
-  OperationKeys.CREATE,
-  OperationKeys.DELETE,
-])(Entity);
-BlockOperations([
-  OperationKeys.UPDATE,
-  OperationKeys.CREATE,
-  OperationKeys.DELETE,
-])(AccountConfig);
-BlockOperations([
-  OperationKeys.UPDATE,
-  OperationKeys.CREATE,
-  OperationKeys.DELETE,
-])(LavajetModule);
-BlockOperations([
-  OperationKeys.UPDATE,
-  OperationKeys.CREATE,
-  OperationKeys.DELETE,
-])(LavajetModuleFeature);
-BlockOperations([
-  OperationKeys.CREATE,
-  OperationKeys.UPDATE,
-  OperationKeys.DELETE,
-])(LeafletResolver);
-BlockOperations([OperationKeys.DELETE])(LeafletFile);
-BlockOperations([OperationKeys.DELETE])(Product);
-BlockOperations([OperationKeys.DELETE])(Batch);
-BlockOperations([OperationKeys.DELETE])(ProductMarket);
-BlockOperations([OperationKeys.DELETE])(ProductStrength);
-BlockOperations([OperationKeys.DELETE])(ProductImage);
-BlockOperations([
-  OperationKeys.CREATE,
-  OperationKeys.UPDATE,
-  OperationKeys.DELETE,
-])(FabricIdentity);
-BlockOperations([
-  OperationKeys.CREATE,
-  OperationKeys.UPDATE,
-  OperationKeys.DELETE,
-  { kind: "statement", value: PreparedStatementKeys.LIST_BY },
-  { kind: "statement", value: PreparedStatementKeys.FIND },
-  { kind: "statement", value: PreparedStatementKeys.FIND_ONE_BY },
-  { kind: "statement", value: PreparedStatementKeys.PAGE },
-  { kind: "statement", value: PreparedStatementKeys.FIND_BY },
-  { kind: "statement", value: PreparedStatementKeys.PAGE_BY },
-  { kind: "statement", value: "statement" },
-])(History);
-controllerConfig({ allowGroupingQueries: false })(History);
-controllerConfig({ allowBulkStatement: false })(History);
+import { TypeORMTransformer } from "./handlers/TypeORMTransformer";
+import { Environment } from "./utils/environment";
+import { EVENTS_API_PATH } from "./utils/constants";
 
 const decafHandlers = [ImpersonateHandler as any];
 const throttling = Environment.orThrow().throttling;
+const adminEnv = AdminEnvironment.orThrow();
+const env = Environment.orThrow();
 
 const log = Logging.get();
-const env = JSON.parse(JSON.stringify(Environment, undefined, 2));
-log.debug(`environment: ${JSON.stringify(env, null, 2)}`);
+
+const serializedEnv = JSON.parse(
+  JSON.stringify(AdminEnvironment, undefined, 2)
+);
+log.debug(`environment: ${JSON.stringify(serializedEnv, null, 2)}`);
 
 @Module({
   imports: [
@@ -132,102 +49,32 @@ log.debug(`environment: ${JSON.stringify(env, null, 2)}`);
     DecafModule.forRootAsync({
       conf: [
         [
-          FabricClientAdapter as any,
+          TypeORMAdapter as any,
           {
-            cryptoPath: Environment.orThrow().fabric.cryptoPath,
-            keyCertOrDirectoryPath:
-              Environment.orThrow().fabric.keyCertOrDirectoryPath,
-            certCertOrDirectoryPath:
-              Environment.orThrow().fabric.certCertOrDirectoryPath,
-            tlsCert: Environment.orThrow().fabric.tlsCert,
-            peerEndpoint: Environment.orThrow().fabric.peerEndpoint,
-            peerHostAlias: Environment.orThrow().fabric.peerHostAlias,
-            chaincodeName: Environment.orThrow().fabric.chaincodeName,
-            ca: Environment.orThrow().fabric.ca,
-            mspId: Environment.orThrow().fabric.mspId,
-            channel: Environment.orThrow().fabric.channel,
-            allowGatewayOverride: Environment.orThrow().fabric.preferLegacy,
-            legacyMspCount: 2,
-            mspMap: {
-              BagacitoMSP: [
-                {
-                  endpoint:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__0__ENDPOINT"
-                    ] || "localhost:7050",
-                  alias:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__0__ALIAS"
-                    ] || "bagacito-peer-0",
-                  tlsCert:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__0__TLS_CERT"
-                    ] || "./docker/docker-data/pla-peer-0-tls.pem",
-                },
-                {
-                  endpoint:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__1__ENDPOINT"
-                    ] || "localhost:7051",
-                  alias:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__1__ALIAS"
-                    ] || "bagacito-peer-1",
-                  tlsCert:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__1__TLS_CERT"
-                    ] || "./docker/docker-data/pla-peer-1-tls.pem",
-                },
-                {
-                  endpoint:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__2__ENDPOINT"
-                    ] || "localhost:7052",
-                  alias:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__2__ALIAS"
-                    ] || "bagacito-peer-2",
-                  tlsCert:
-                    process.env[
-                      "FABRIC__MSP_MAP__BAGACITOMSP__2__TLS_CERT"
-                    ] || "./docker/docker-data/pla-peer-2-tls.pem",
-                },
-              ],
-            },
-          } as unknown as PeerConfig,
-          new FabricTransformer(),
-        ],
-        [
-          NanoAdapter as any,
-          {
-            couchUser: Environment.orThrow().database.couchdb.user,
-            couchPassword: Environment.orThrow().database.couchdb.password,
-            host: `${Environment.orThrow().database.couchdb.host}:${Environment.database.couchdb.port}`,
-            dbName: Environment.orThrow().database.couchdb.database,
-            protocol: Environment.orThrow().database.couchdb.protocol,
+            type: "postgres",
+            host: adminEnv.database.postgres!.host, //TODO - for demo
+            port: adminEnv.database.postgres!.port,
+            database: adminEnv.database.postgres!.database,
+            username: adminEnv.database.postgres!.user,
+            password: adminEnv.database.postgres!.password,
+            // env: DATABASE__POSTGRES__SYNCHRONIZE (toolkit config field);
+            // cast keeps this forward-compatible with published toolkit
+            // versions that predate the field (falls back to true)
+            synchronize:
+              (adminEnv.database.postgres as any)?.synchronize ?? true,
+            logging: true,
           } as any,
-          new NanoTransformer(),
-        ],
-        [
-          NanoAdapter as any,
-          {
-            couchUser: Environment.orThrow().tasks.user,
-            couchPassword: Environment.orThrow().tasks.password,
-            host: `${Environment.orThrow().database.couchdb.host}:${Environment.database.couchdb.port}`,
-            dbName: Environment.orThrow().tasks.database,
-            protocol: Environment.orThrow().database.couchdb.protocol,
-          } as any,
-          "tasks",
-          new NanoTransformer(),
-        ],
+          new TypeORMTransformer(),
+        ]
       ],
       autoControllers: true,
       aggregations: false,
       observerOptions: {
         enableObserverEvents: true,
-        // observerFlavours: [],
-        observerFlavours: [FabricFlavour, "tasks"],
+        observerFlavours: [],
         observerApiPath: EVENTS_API_PATH,
+        // the stream is otherwise open to anyone reaching the backend; see
+        // FabricKeycloakAuthHandler.prime for its token-only binding
         authenticate: true,
       },
       handlers: decafHandlers,
@@ -248,7 +95,6 @@ log.debug(`environment: ${JSON.stringify(env, null, 2)}`);
         skipIf: () => !throttling.enabled,
       },
     ]),
-    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
@@ -261,7 +107,6 @@ log.debug(`environment: ${JSON.stringify(env, null, 2)}`);
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    ResolverTasksService,
   ],
 })
 export class AppModule {}
