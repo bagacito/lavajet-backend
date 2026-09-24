@@ -27,7 +27,6 @@ covers both build targets of the service:
 There is intentionally **no user guide** in this specification. The generated
 OpenAPI documents are the API of record and stand in for one:
 
-* [`lavajet-api.json`](../../lavajet-api.json) — EW (MAH) surface.
-* [`lavajet-pla-api.json`](../../lavajet-pla-api.json) — PLA (Admin) surface.
-* 
+* `lavajet-api.json` — MAH surface, generated locally via `npm run extract:api` (not committed).
+*
 (see [Endpoints](LAVAJET_05_0_Endpoints.md)).

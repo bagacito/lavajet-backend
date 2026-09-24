@@ -2,14 +2,12 @@
 
 The API of record is the generated OpenAPI document, not a user guide:
 
-* [`lavajet-api.json`](../../lavajet-api.json) — EW (MAH) build, 215 paths.
-* [`lavajet-pla-api.json`](../../lavajet-pla-api.json) — PLA (Admin) build, 254 paths.
+* `lavajet-api.json` — 215 paths, generated locally via `npm run extract:api` (not committed).
 
-Both are exported with the package scripts:
+Exported with the package script:
 
 ```
 npm run extract:api        # npx decaf nest export-api --input ./lib/app.module.js ...
-npm run extract:api:pla     # npx decaf nest export-api --input ./lib/app.module.js ...
 ```
 
 The export command boots the compiled application module so the Swagger

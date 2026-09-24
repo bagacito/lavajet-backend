@@ -25,18 +25,10 @@ WORKDIR /$WORKDIR
 
 RUN --mount=type=secret,id=TOKEN NPM_TOKEN=$(cat /run/secrets/TOKEN) npm ci
 
-LABEL name="Pharmaledger's Lavajet Backend base image (local)" description="Local dev base image"
+LABEL name="Lavajet Backend base image (local)" description="Local dev base image"
 
 
-FROM builder AS builder-pla-local
-
-RUN mv /${WORKDIR}/src/app.module.ts /${WORKDIR}/src/app-ew.module.ts
-RUN mv /${WORKDIR}/src/app-pla.module.ts /${WORKDIR}/src/app.module.ts
-
-LABEL name="Lavajet Admin Lavajet Backend base image (local)" description="Local dev base image, devDependencies kept"
-
-
-FROM builder-pla-local AS dev-pla-watch
+FROM builder AS dev-watch
 
 ENV WORKDIR="lavajet-backend"
 
@@ -47,4 +39,4 @@ EXPOSE 9229/tcp
 
 ENTRYPOINT ["npx", "nest", "start", "--watch", "--debug", "0.0.0.0:9229"]
 
-LABEL name="Lavajet Admin Lavajet Backend (dev watch, local only)" description="Local dev image with bind-mounted source and nest watch hot-reload, no rebuild needed on change. Not for team use."
+LABEL name="Lavajet Backend (dev watch, local only)" description="Local dev image with bind-mounted source and nest watch hot-reload, no rebuild needed on change. Not for team use."

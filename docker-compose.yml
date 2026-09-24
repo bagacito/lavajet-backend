@@ -41,10 +41,10 @@ services:
     build:
       context: .
       dockerfile: DockerfileLocal
-      target: dev-pla-watch
+      target: dev-watch
       secrets:
         - TOKEN
-    image: ghcr.io/bagacito/lavajet-backend-pla-dev:pdm-local
+    image: ghcr.io/bagacito/lavajet-backend-dev:pdm-local
     container_name: pdm-backend
     volumes:
       - pdm-ca-client-vol:/docker/docker-data:ro

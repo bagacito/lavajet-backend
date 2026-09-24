@@ -6,7 +6,6 @@ import { host, authenticate } from "./integration-env";
 import { buildMarketPayload } from "./payload-builders";
 import { Model } from "@decaf-ts/decorator-validation";
 
-// jestOpenAPI(path.join(__dirname, "../../lavajet-pla-api.json.json"));
 
 describe("Market API", () => {
   const basePath = "/market";

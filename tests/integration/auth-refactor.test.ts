@@ -8,7 +8,7 @@
  *   - DECAF_ADAPTER_OPTIONS is no longer used anywhere in src/
  *   - @SkipFabricIdentity decorator exists and sets the right metadata
  *   - AuthModule wires FabricKeycloakAuthHandler as AUTH_HANDLER
- *   - OpenAPI specs are unchanged (lavajet-api.json, lavajet-pla-api.json)
+
  */
 import { KeycloakAuthHandler } from "@decaf-ts/integrations/nest";
 import { JwtService } from "@decaf-ts/crypto/integration/services/jwt";
